@@ -140,6 +140,7 @@ ul.lib .t small{color:var(--ink-3);margin-left:8px}
         <button id="play" class="primary">Play</button>
         <div class="opts">
           <label><input type="checkbox" id="countin" checked> Count-in</label>
+          <label><input type="checkbox" id="click"> Click track</label>
         </div>
       </div>
     </div>
@@ -504,12 +505,16 @@ function pluck(t,f,dur){const o=ctx.createOscillator(),o2=ctx.createOscillator()
   g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.55,t+.006);g.gain.exponentialRampToValueAtTime(.14,t+.35);g.gain.setValueAtTime(.14,t+Math.max(.36,len-.06));g.gain.exponentialRampToValueAtTime(.0005,t+len);
   o.connect(fl);o2.connect(g2);g2.connect(fl);fl.connect(g);g.connect(ctx.destination);o.start(t);o2.start(t);o.stop(t+len+.02);o2.stop(t+len+.02);
   nodes.push(o,o2);if(nodes.length>160)nodes=nodes.slice(-60)}
-function tick(t,acc){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=acc?1600:1100;g.gain.setValueAtTime(.25,t);g.gain.exponentialRampToValueAtTime(.001,t+.05);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+.06);nodes.push(o)}
+function tick(t,acc){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=acc?1600:1100;g.gain.setValueAtTime(acc?.28:.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.05);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+.06);nodes.push(o)}
 function preview(m,kk){if(playing)return;ac();pluck(ctx.currentTime+.02,freq(m),.8);lightTarget(kk);setTimeout(()=>{if(!playing)lightTarget(null)},800)}
 const bp=()=>aBeat+(ctx.currentTime-aTime)/beatDur;
 const timeOf=b=>aTime+(b-aBeat)*beatDur;
 function schedule(){if(!playing)return;const horizon=ctx.currentTime+.15;const cb=4/P.den;
-  while(nextTick*cb<C&&timeOf(nextTick*cb)<horizon){tick(Math.max(timeOf(nextTick*cb),ctx.currentTime),nextTick%P.num===0);nextTick++}
+  const clickOn=$('click').checked;
+  for(let guard=0;guard<64&&timeOf(nextTick*cb)<horizon;guard++){const bq=nextTick*cb;
+    if(bq<C)tick(Math.max(timeOf(bq),ctx.currentTime),nextTick%P.num===0);
+    else if(clickOn&&timeOf(bq)>ctx.currentTime-.03){const local=mod(bq-C,P.L);const acc=P.ms.some(q=>Math.abs(q-local)<1e-6)||Math.abs(local-P.totalQ)<1e-6;tick(Math.max(timeOf(bq),ctx.currentTime),acc)}
+    nextTick++}
   if(!P.plucks.length)return;
   for(let guard=0;guard<64;guard++){const pk=P.plucks[nextIx];const b=C+nextCyc*P.L+pk.q;if(timeOf(b)>=horizon)break;
     if(timeOf(b)>ctx.currentTime-.05)pluck(Math.max(timeOf(b),ctx.currentTime),freq(pk.midi),pk.d*beatDur);
@@ -681,6 +686,9 @@ try{if('serviceWorker' in navigator&&location.protocol==='https:'&&!(window.clau
 
 /* ===== Boot ===== */
 loadLib();
+try{$('click').checked=localStorage.getItem(LS+'.click')==='1';$('countin').checked=localStorage.getItem(LS+'.countin')!=='0'}catch(e){}
+$('click').addEventListener('change',()=>{try{localStorage.setItem(LS+'.click',$('click').checked?'1':'0')}catch(e){}});
+$('countin').addEventListener('change',()=>{try{localStorage.setItem(LS+'.countin',$('countin').checked?'1':'0')}catch(e){}});
 function boot(){if(typeof ABCJS==='undefined'){$('ptitle').textContent='Music reader did not load';setMsg('abcMsg','The music reader failed to load. Check your connection and reload.','err');return}
   selectPiece(lib.current||lib.pieces[0].id)}
 boot();

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="78%" r="80%">
+      <stop offset="0" stop-color="#2a2f45"/>
+      <stop offset="0.55" stop-color="#151827"/>
+      <stop offset="1" stop-color="#0b0c14"/>
+    </radialGradient>
+    <linearGradient id="board" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#140f0d"/>
+      <stop offset="1" stop-color="#3a2a22"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b0c14" stop-opacity="1"/>
+      <stop offset="0.45" stop-color="#0b0c14" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#7fbaff" stop-opacity="0.9"/>
+      <stop offset="0.45" stop-color="#5ea5f2" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#5ea5f2" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <!-- fingerboard highway in perspective -->
+  <path d="M432 70 L592 70 L860 1024 L164 1024 Z" fill="url(#board)"/>
+  <!-- tapes -->
+  <g fill="#e9e2d4">
+    <path d="M369 296 L655 296 L662 314 L362 314 Z" opacity="0.55"/>
+    <path d="M300 540 L724 540 L733 562 L291 562 Z" opacity="0.75"/>
+    <path d="M262 676 L762 676 L772 700 L252 700 Z" opacity="0.9"/>
+  </g>
+  <!-- strings: E A D G -->
+  <g stroke-linecap="round">
+    <line x1="460" y1="70" x2="268" y2="1024" stroke="#ec6f9c" stroke-width="22"/>
+    <line x1="493" y1="70" x2="436" y2="1024" stroke="#f1ad3d" stroke-width="19"/>
+    <line x1="527" y1="70" x2="602" y2="1024" stroke="#5ea5f2" stroke-width="16"/>
+    <line x1="561" y1="70" x2="766" y2="1024" stroke="#3cc49b" stroke-width="13"/>
+  </g>
+  <rect width="1024" height="1024" fill="url(#fade)"/>
+  <!-- incoming notes, smaller with distance -->
+  <circle cx="476" cy="330" r="30" fill="#f1ad3d" opacity="0.75"/>
+  <circle cx="642" cy="450" r="40" fill="#3cc49b" opacity="0.9"/>
+  <!-- hit note with glow -->
+  <circle cx="576" cy="688" r="190" fill="url(#glow)"/>
+  <circle cx="576" cy="688" r="118" fill="none" stroke="#9fcaff" stroke-width="10" opacity="0.55"/>
+  <circle cx="576" cy="688" r="84" fill="#5ea5f2"/>
+  <circle cx="576" cy="688" r="84" fill="none" stroke="#ffffff" stroke-width="10"/>
+  <text x="576" y="722" text-anchor="middle" font-family="Bricolage Grotesque, Avenir Next, Helvetica, sans-serif" font-weight="800" font-size="104" fill="#ffffff">4</text>
+</svg>

@@ -64,9 +64,10 @@ html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjus
 *{touch-action:pan-x pan-y}
 input[type=range]{touch-action:pan-y}
 @supports (-webkit-touch-callout:none){input,select,textarea{font-size:16px!important}}
-header,.piecehead,.legend,.loopctl,.opts,.stage>.hint,#incoming,#libS,#editS{transition:opacity .35s ease}
-body.focus :is(header,.piecehead,.legend,.loopctl,.opts,.stage>.hint,#incoming,#libS,#editS){opacity:.08;pointer-events:none}
+header,.piecehead,.legend,.stage>.hint,#incoming,#libS,#editS{transition:opacity .35s ease}
+body.focus :is(header,.piecehead,.legend,.stage>.hint,#incoming,#libS,#editS){opacity:.08;pointer-events:none}
 body.focus{overflow:hidden;overscroll-behavior:none}
+body.focus .legend{display:none}
 html:has(body.focus){overflow:hidden;overscroll-behavior:none}
 body.focus #fb{width:auto;max-width:100%}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;font-size:13px;color:var(--ink-2)}
@@ -604,10 +605,10 @@ if(window.visualViewport)window.visualViewport.addEventListener('resize',()=>{if
 function viewH(){return (window.visualViewport&&window.visualViewport.height)||window.innerHeight}
 function fitFocus(){if(!document.body.classList.contains('focus'))return;const fb=$('fb');
   fb.style.height='';const vh=viewH(),pad=12;
-  const top0=fb.getBoundingClientRect().top,bot0=$('play').getBoundingClientRect().bottom;
+  const top0=fb.getBoundingClientRect().top,bot0=document.querySelector('.trow').getBoundingClientRect().bottom;
   const natural=fb.getBoundingClientRect().height,others=(bot0-top0)-natural;
   const h=Math.max(200,Math.min(natural,vh-others-pad*2));fb.style.height=h+'px';
-  const r=fb.getBoundingClientRect(),blockH=$('play').getBoundingClientRect().bottom-r.top;
+  const r=fb.getBoundingClientRect(),blockH=document.querySelector('.trow').getBoundingClientRect().bottom-r.top;
   const y=window.scrollY+r.top-Math.max(pad,(vh-blockH)/2);
   window.scrollTo({top:Math.max(0,y),behavior:'smooth'})}
 function blockScroll(e){if(!document.body.classList.contains('focus'))return;if(e.target&&e.target.closest&&e.target.closest('input[type=range]'))return;e.preventDefault()}
@@ -620,15 +621,15 @@ if(window.visualViewport)window.visualViewport.addEventListener('resize',()=>req
 async function start(){if(!P)return;ac();playing=true;C=$('countin').checked?P.measureQ:0;beatDur=60/+$('bpm').value;aBeat=0;aTime=ctx.currentTime+.12;nextCyc=0;nextIx=0;nextTick=0;hotIx=-1;
   $('play').textContent='Stop';enterFocus();schedule();sched=setInterval(schedule,25);raf=requestAnimationFrame(frame);
   try{if(navigator.wakeLock)wake=await navigator.wakeLock.request('screen')}catch(e){wake=null}}
-function stop(){playing=false;cancelAnimationFrame(raf);clearInterval(sched);nodes.forEach(n=>{try{n.stop()}catch(e){}});nodes=[];
+function stop(keepFocus){playing=false;cancelAnimationFrame(raf);clearInterval(sched);nodes.forEach(n=>{try{n.stop()}catch(e){}});nodes=[];
   const hw=$('hw');if(hw)hw.innerHTML='';hotNote(-1);lightTarget(null);setStatus('');$('play').textContent='Play';if(P)placeStaff(0,0);
-  exitFocus();try{if(wake){wake.release();wake=null}}catch(e){}}
-$('play').addEventListener('click',()=>playing?stop():start());
+  if(keepFocus!==true)exitFocus();try{if(wake){wake.release();wake=null}}catch(e){}}
+$('play').addEventListener('click',()=>{if(restartPending){clearTimeout(rangeT);rangeT=0;restartPending=false;stop()}else if(playing)stop();else start()});
 $('bpm').addEventListener('input',()=>{const v=+$('bpm').value;$('bpmv').textContent=v+' bpm';const nd=60/v;if(playing){const p=bp();aBeat=p;aTime=ctx.currentTime}beatDur=nd;
   const pc=cur();if(pc){pc.tempo=v;clearTimeout(window._tsv);window._tsv=setTimeout(saveLib,400)}});
 
 /* ===== Bar-range view ===== */
-let FULL=null,range=[1,1],rangeT=0;
+let FULL=null,range=[1,1],rangeT=0,restartPending=false;
 function sliceView(F,a,b){
   const ms=F.msAll,N=ms.length;const qa=ms[a-1],qb=b<N?ms[b]:F.totalQ;
   if(a===1&&b===N)return Object.assign({},F,{ms,barBase:0});
@@ -652,8 +653,8 @@ function applyRange(){const N=FULL.msAll.length;P=sliceView(FULL,range[0],range[
 function setRange(a,b){if(!FULL)return;const N=FULL.msAll.length;a=Math.max(1,Math.min(N,a));b=Math.max(1,Math.min(N,b));if(a>b){if(a!==range[0])b=a;else a=b}
   if(a===range[0]&&b===range[1])return;
   range=[a,b];const pc=cur();if(pc){pc.range=(a===1&&b===N)?null:[a,b];saveLib()}
-  const was=playing;if(was)stop();applyRange();
-  clearTimeout(rangeT);if(was)rangeT=setTimeout(()=>{if(!playing)start()},500)}
+  const was=playing;if(was)stop(true);applyRange();
+  clearTimeout(rangeT);rangeT=0;if(was||restartPending){restartPending=true;$('play').textContent='Stop';rangeT=setTimeout(()=>{rangeT=0;restartPending=false;if(!playing)start()},500)}}
 $('aDec').addEventListener('click',()=>setRange(range[0]-1,range[1]));
 $('aInc').addEventListener('click',()=>setRange(range[0]+1,range[1]));
 $('bDec').addEventListener('click',()=>setRange(range[0],range[1]-1));

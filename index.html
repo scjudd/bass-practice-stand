@@ -150,7 +150,8 @@ ul.lib .t small{color:var(--ink-3);margin-left:8px}
   <section class="card" aria-labelledby="libH">
     <h2 id="libH">Library</h2>
     <ul class="lib" id="libList"></ul>
-    <div class="row"><button id="newBtn">New piece</button></div>
+    <div class="row"><button id="newBtn">New piece</button><button id="clearBtn" class="quiet">Clear library</button></div>
+    <div id="clearConfirm" class="confirm" hidden><span id="clearText">Remove every piece?</span><button id="clearYes" class="danger">Clear library</button><button id="clearNo" class="quiet">Keep</button></div>
 
     <h3>Import</h3>
     <div class="hint">Paste a library export or ABC text, or choose a .json or .abc file. Pieces with the same title are replaced.</div>
@@ -613,6 +614,11 @@ function selectPiece(id){if(playing)stop();lib.current=id;saveLib();const pc=cur
   if(render(pc.abc,'open')){const t=pc.tempo||P.bpm;$('bpm').value=t;$('bpmv').textContent=t+' bpm';beatDur=60/t}
   fillLib()}
 let pendingRemove=null;
+$('clearBtn').addEventListener('click',()=>{const n=lib.pieces.length;$('clearText').textContent='Remove all '+n+' piece'+(n===1?'':'s')+'? This can\u2019t be undone, so save a library file first if you might want them back.';$('clearConfirm').hidden=false});
+$('clearNo').addEventListener('click',()=>{$('clearConfirm').hidden=true});
+$('clearYes').addEventListener('click',()=>{$('clearConfirm').hidden=true;pendingRemove=null;
+  lib.pieces=SAMPLES.map(s=>({id:uid(),abc:s.abc,tempo:null}));lib.current=lib.pieces[0].id;saveLib();selectPiece(lib.current);
+  setMsg('importMsg','Library cleared. The sample warm-up is back so there\u2019s something to play.','ok')});
 function removePiece(id){lib.pieces=lib.pieces.filter(p=>p.id!==id);
   if(!lib.pieces.length)lib.pieces=SAMPLES.map(s=>({id:uid(),abc:s.abc,tempo:null}));
   if(!lib.pieces.some(p=>p.id===lib.current)){lib.current=lib.pieces[0].id;saveLib();selectPiece(lib.current)}else{saveLib();fillLib()}}

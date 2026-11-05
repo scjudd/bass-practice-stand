@@ -83,6 +83,11 @@ svg{display:block;width:100%;height:auto}
 .opts select{height:38px;font-family:var(--f-body);font-weight:400;font-size:14px;flex:none}
 .hint{font-size:12px;color:var(--ink-3)}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.card.fold{display:block;padding:0}
+.card.fold>summary{padding:16px}
+.card.fold>summary h2{margin:0}
+.card.fold>summary::after{font-size:24px}
+.fold-body{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
 .card h2{font-family:var(--f-display);font-weight:700;font-size:20px;margin:0}
 .card h3{font-family:var(--f-display);font-weight:700;font-size:16px;margin:10px 0 -4px}
 details.sub{border:1px solid var(--line);border-radius:12px;background:var(--bg)}
@@ -108,6 +113,7 @@ ul.lib li.cur{background:var(--sunk)}
 ul.lib .t{flex:1;min-width:0;overflow-wrap:anywhere;line-height:1.3}
 ul.lib button{padding:0 10px}
 ul.lib button.quiet:last-child{color:var(--ink-3)}
+ul.lib button.up,ul.lib button.dn{font-size:20px;min-width:44px;color:var(--ink)!important}
 [hidden]{display:none!important}
 ul.lib .t small{color:var(--ink-3);margin-left:8px}
 #exportbox{min-height:120px;font-size:12px}
@@ -163,10 +169,11 @@ ul.plain{margin:0;padding-left:20px;font-size:15px}
     <div class="hint">Loops with a bar of rest between passes. Tap a circle to hear that note. No sound on iPhone? Turn off silent mode.</div>
   </section>
 
-  <section class="card" aria-labelledby="libH">
-    <h2 id="libH">Library</h2>
+  <details class="card fold" id="libS">
+    <summary><h2 id="libH">Library</h2></summary>
+    <div class="fold-body">
     <ul class="lib" id="libList"></ul>
-    <div class="row"><button id="newBtn">New piece</button><button id="clearBtn" class="quiet">Clear library</button></div>
+    <div class="row"><button id="newBtn">New piece</button><button id="orderBtn" class="quiet" aria-pressed="false">Reorder</button><button id="clearBtn" class="quiet">Clear library</button></div>
     <div id="clearConfirm" class="confirm" hidden><span id="clearText">Remove every piece?</span><button id="clearYes" class="danger">Clear library</button><button id="clearNo" class="quiet">Keep</button></div>
 
     <h3>Share</h3>
@@ -234,10 +241,12 @@ Rules for each piece:
     <div class="row"><button id="exportBtn">Save library file</button><button id="copyBtn">Copy library text</button></div>
     <textarea id="exportbox" readonly hidden aria-label="Library export text"></textarea>
     <div class="msg" id="exportMsg"></div>
-  </section>
+    </div>
+  </details>
 
-  <section class="card" id="editS" aria-labelledby="editH">
-    <h2 id="editH">Edit this piece</h2>
+  <details class="card fold" id="editS">
+    <summary><h2 id="editH">Edit this piece</h2></summary>
+    <div class="fold-body">
     <label for="abc" class="hint">Written in ABC notation. Changes preview as you type; Save keeps them.</label>
     <textarea id="abc" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
     <div class="msg" id="abcMsg"></div>
@@ -270,7 +279,8 @@ Rules for each piece:
           <h4>Header</h4>
           <code>T: M: L: Q: K:</code><span>Title, meter, unit length, tempo (Q:1/4=72), key (K:C clef=bass)</span>
         </div>
-  </section>
+    </div>
+  </details>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/abcjs@6.7.2/dist/abcjs-basic-min.js"></script>
@@ -650,7 +660,15 @@ $('clearYes').addEventListener('click',()=>{$('clearConfirm').hidden=true;pendin
 function removePiece(id){lib.pieces=lib.pieces.filter(p=>p.id!==id);
   if(!lib.pieces.length)lib.pieces=SAMPLES.map(s=>({id:uid(),abc:s.abc,tempo:null}));
   if(!lib.pieces.some(p=>p.id===lib.current)){lib.current=lib.pieces[0].id;saveLib();selectPiece(lib.current)}else{saveLib();fillLib()}}
-function fillLib(){const ul=$('libList');ul.innerHTML='';lib.pieces.forEach(p=>{const li=document.createElement('li');if(p.id===lib.current)li.className='cur';
+let reordering=false;
+function movePiece(i,d){const j=i+d;if(j<0||j>=lib.pieces.length)return;const a=lib.pieces;[a[i],a[j]]=[a[j],a[i]];saveLib();fillLib();
+  const btn=$('libList').children[j]&&$('libList').children[j].querySelector(d<0?'.up':'.dn')||$('libList').children[j]&&$('libList').children[j].querySelector('button');if(btn)btn.focus()}
+$('orderBtn').addEventListener('click',()=>{reordering=!reordering;pendingRemove=null;$('orderBtn').textContent=reordering?'Done reordering':'Reorder';$('orderBtn').setAttribute('aria-pressed',String(reordering));fillLib()});
+function fillLib(){const ul=$('libList');ul.innerHTML='';lib.pieces.forEach((p,i)=>{const li=document.createElement('li');if(p.id===lib.current)li.className='cur';
+  if(reordering){const t=document.createElement('span');t.className='t';t.textContent=titleOf(p.abc);
+    const up=document.createElement('button');up.className='quiet up';up.textContent='\u2191';up.setAttribute('aria-label','Move '+titleOf(p.abc)+' up');up.style.visibility=i===0?'hidden':'';up.addEventListener('click',()=>movePiece(i,-1));
+    const dn=document.createElement('button');dn.className='quiet dn';dn.textContent='\u2193';dn.setAttribute('aria-label','Move '+titleOf(p.abc)+' down');dn.style.visibility=i===lib.pieces.length-1?'hidden':'';dn.addEventListener('click',()=>movePiece(i,1));
+    li.append(t,up,dn);ul.appendChild(li);return}
   const t=document.createElement('span');t.className='t';
   if(pendingRemove===p.id){t.textContent='Remove “'+titleOf(p.abc)+'”?';
     const yes=document.createElement('button');yes.className='danger';yes.textContent='Remove';yes.addEventListener('click',()=>{pendingRemove=null;removePiece(p.id)});
@@ -676,7 +694,7 @@ M:4/4
 L:1/4
 Q:1/4=72
 K:C clef=bass
-D, D, E, E, | ^F, ^F, G,2 | ^F, E, D,2 |]`,mode:'open',tempo:null};lib.pieces.push(np);saveLib();selectPiece(np.id);$('editS').scrollIntoView({behavior:'smooth',block:'start'});$('abc').focus({preventScroll:true})});
+D, D, E, E, | ^F, ^F, G,2 | ^F, E, D,2 |]`,mode:'open',tempo:null};lib.pieces.push(np);saveLib();selectPiece(np.id);$('editS').open=true;$('editS').scrollIntoView({behavior:'smooth',block:'start'});$('abc').focus({preventScroll:true})});
 
 /* ===== Import / export ===== */
 function splitAbc(txt){const parts=txt.split(/^(?=X:)/m).map(s=>s.trim()).filter(s=>/^X:/m.test(s)&&/^K:/m.test(s));return parts}

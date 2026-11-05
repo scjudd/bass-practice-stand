@@ -612,9 +612,7 @@ function drawVib(v){const g=$('vib');if(!g)return;g.innerHTML='';if(!v)return;
   mk(g,'path',{d,fill:'none',stroke:c,'stroke-width':12,opacity:(.35+.35*flash).toFixed(3),filter:'url(#sglow)','stroke-linecap':'round'});
   mk(g,'path',{d,fill:'none',stroke:c,'stroke-width':4.6,'stroke-linecap':'round'});
   mk(g,'path',{d,fill:'none',stroke:'#ffffff','stroke-width':1.2,opacity:(.2+.3*flash).toFixed(3),'stroke-linecap':'round'});
-  const nd=wavePath(HIT,y0,y1,amp,ph);
-  mk(g,'path',{d:nd,fill:'none',stroke:c,'stroke-width':10,opacity:(.3+.3*flash).toFixed(3),filter:'url(#sglow)','stroke-linecap':'round'});
-  mk(g,'path',{d:nd,fill:'none',stroke:c,'stroke-width':2.6,opacity:(.75+.25*flash).toFixed(3),'stroke-linecap':'round'})}
+}
 let pvRaf=0;
 function previewVib(s,k){cancelAnimationFrame(pvRaf);const t0=performance.now();const step=()=>{if(playing)return;const el=(performance.now()-t0)/1000;if(el>.8){drawVib(null);return}drawVib({s,k,el});pvRaf=requestAnimationFrame(step)};step()}
 function frame(){if(!playing)return;const p=bp(),pos=p-C;let cyc=0,local=pos;

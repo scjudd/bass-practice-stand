@@ -96,7 +96,9 @@ body.focus #fb{width:auto;max-width:100%}
 .hint{font-size:12px;color:var(--ink-3)}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
 .card.fold{display:block;padding:0}
-.card.fold>summary{padding:16px}
+.card.fold>summary{padding:16px;border-radius:16px}
+.card.fold[open]>summary{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border-radius:16px 16px 0 0;border-bottom:1px solid var(--line);margin-bottom:12px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 .card.fold>summary h2{margin:0}
 .card.fold>summary::after{font-size:24px}
 .fold-body{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
@@ -108,7 +110,7 @@ details.sub summary{font-size:15px;padding:12px 14px}
 summary{cursor:pointer;list-style:none;font-family:var(--f-display);font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:10px}
 summary::-webkit-details-marker{display:none}
 summary::after{content:"+";font-weight:500;color:var(--ink-3);font-size:22px}
-details[open] summary::after{content:"\2212"}
+details[open]>summary::after{content:"\2212"}
 .panel{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
 textarea{width:100%;min-height:220px;padding:12px;font-family:var(--f-mono);font-size:14px;line-height:1.55;resize:vertical;tab-size:2}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -619,6 +621,8 @@ document.addEventListener('wheel',blockScroll,{passive:false});
 function enterFocus(){document.body.classList.add('focus');requestAnimationFrame(fitFocus)}
 function exitFocus(){document.body.classList.remove('focus');$('fb').style.height=''}
 window.addEventListener('resize',()=>requestAnimationFrame(fitFocus));
+document.querySelectorAll('details.card.fold').forEach(d=>d.addEventListener('toggle',()=>{if(d.open)return;const r=d.getBoundingClientRect();
+  if(r.top<0)window.scrollTo({top:window.scrollY+r.top-12,behavior:'auto'})}));
 if(window.visualViewport)window.visualViewport.addEventListener('resize',()=>requestAnimationFrame(fitFocus));
 async function start(){if(!P)return;ac();playing=true;C=$('countin').checked?P.measureQ:0;beatDur=60/+$('bpm').value;aBeat=0;aTime=ctx.currentTime+.12;nextCyc=0;nextIx=0;nextTick=0;hotIx=-1;
   $('play').textContent='Stop';enterFocus();schedule();sched=setInterval(schedule,25);raf=requestAnimationFrame(frame);

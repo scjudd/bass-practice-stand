@@ -60,6 +60,11 @@ button.quiet{border-color:transparent;background:transparent;font-weight:400;col
 .meta{font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums}
 svg{display:block;width:100%;height:auto}
 #fb{max-width:440px;margin:0 auto}
+header,.piecehead,.legend,.loopctl,.opts,.stage>.hint,#incoming,#libS,#editS{transition:opacity .35s ease}
+body.focus :is(header,.piecehead,.legend,.loopctl,.opts,.stage>.hint,#incoming,#libS,#editS){opacity:.08;pointer-events:none}
+body.focus{overflow:hidden;overscroll-behavior:none}
+html:has(body.focus){overflow:hidden;overscroll-behavior:none}
+body.focus #fb{width:auto;max-width:100%}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;font-size:13px;color:var(--ink-2)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend b{width:12px;height:12px;border-radius:50%;display:inline-block}
@@ -586,12 +591,29 @@ function frame(){if(!playing)return;const p=bp(),pos=p-C;let cyc=0,local=pos;
   if(pos<0){const cb=4/P.den;setStatus('Count-in '+(Math.floor((p)/cb)+1)+' of '+P.num)}
   else setStatus(local>=P.totalQ?'Rest bar. Get ready…':'Pass '+(cyc+1)+'  ·  bar '+(P.barBase+P.ms.filter(q=>q<=local+1e-6).length));
   raf=requestAnimationFrame(frame)}
+/* ===== Focus mode while playing: dim the rest, fit the player on screen, lock scrolling ===== */
+function viewH(){return (window.visualViewport&&window.visualViewport.height)||window.innerHeight}
+function fitFocus(){if(!document.body.classList.contains('focus'))return;const fb=$('fb');
+  fb.style.height='';const vh=viewH(),pad=12;
+  const top0=fb.getBoundingClientRect().top,bot0=$('play').getBoundingClientRect().bottom;
+  const natural=fb.getBoundingClientRect().height,others=(bot0-top0)-natural;
+  const h=Math.max(200,Math.min(natural,vh-others-pad*2));fb.style.height=h+'px';
+  const r=fb.getBoundingClientRect(),blockH=$('play').getBoundingClientRect().bottom-r.top;
+  const y=window.scrollY+r.top-Math.max(pad,(vh-blockH)/2);
+  window.scrollTo({top:Math.max(0,y),behavior:'smooth'})}
+function blockScroll(e){if(!document.body.classList.contains('focus'))return;if(e.target&&e.target.closest&&e.target.closest('input[type=range]'))return;e.preventDefault()}
+document.addEventListener('touchmove',blockScroll,{passive:false});
+document.addEventListener('wheel',blockScroll,{passive:false});
+function enterFocus(){document.body.classList.add('focus');requestAnimationFrame(fitFocus)}
+function exitFocus(){document.body.classList.remove('focus');$('fb').style.height=''}
+window.addEventListener('resize',()=>requestAnimationFrame(fitFocus));
+if(window.visualViewport)window.visualViewport.addEventListener('resize',()=>requestAnimationFrame(fitFocus));
 async function start(){if(!P)return;ac();playing=true;C=$('countin').checked?P.measureQ:0;beatDur=60/+$('bpm').value;aBeat=0;aTime=ctx.currentTime+.12;nextCyc=0;nextIx=0;nextTick=0;hotIx=-1;
-  $('play').textContent='Stop';schedule();sched=setInterval(schedule,25);raf=requestAnimationFrame(frame);
+  $('play').textContent='Stop';enterFocus();schedule();sched=setInterval(schedule,25);raf=requestAnimationFrame(frame);
   try{if(navigator.wakeLock)wake=await navigator.wakeLock.request('screen')}catch(e){wake=null}}
 function stop(){playing=false;cancelAnimationFrame(raf);clearInterval(sched);nodes.forEach(n=>{try{n.stop()}catch(e){}});nodes=[];
   const hw=$('hw');if(hw)hw.innerHTML='';hotNote(-1);lightTarget(null);setStatus('');$('play').textContent='Play';if(P)placeStaff(0,0);
-  try{if(wake){wake.release();wake=null}}catch(e){}}
+  exitFocus();try{if(wake){wake.release();wake=null}}catch(e){}}
 $('play').addEventListener('click',()=>playing?stop():start());
 $('bpm').addEventListener('input',()=>{const v=+$('bpm').value;$('bpmv').textContent=v+' bpm';const nd=60/v;if(playing){const p=bp();aBeat=p;aTime=ctx.currentTime}beatDur=nd;
   const pc=cur();if(pc){pc.tempo=v;clearTimeout(window._tsv);window._tsv=setTimeout(saveLib,400)}});

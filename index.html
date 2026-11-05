@@ -66,6 +66,9 @@ button.quiet{border-color:transparent;background:transparent;font-weight:400;col
 .meta{font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums}
 svg{display:block;width:100%;height:auto}
 #fb{max-width:440px;margin:0 auto}
+@keyframes nextpulse{0%,100%{opacity:.95}50%{opacity:.4}}
+.nextring{animation:nextpulse 1s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.nextring{animation:none}}
 html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 *{touch-action:pan-x pan-y}
 input[type=range]{touch-action:pan-y}
@@ -473,6 +476,7 @@ function drawBoard(){
   if(P)PPQH=Math.min(120,Math.max(58,30/P.minD));
   const fdefs=mk(fb,'defs',{});const fl=mk(fdefs,'filter',{id:'sglow',x:'-200%',y:'-10%',width:'500%',height:'120%'});mk(fl,'feGaussianBlur',{stdDeviation:'3.2'});
   mk(fb,'g',{id:'vib'});
+  mk(fb,'g',{id:'nxt'});nxtKey='';
   mk(fb,'g',{id:'hw'});
   targets={};
   if(!P)return;
@@ -610,6 +614,33 @@ function drawHighway(p){const hw=$('hw');if(!hw)return;hw.innerHTML='';
       if(dt<1.25&&!guided.has(ty)){guided.add(ty);mk(hw,'line',{x1:tx+16,y1:ty,x2:gx-14,y2:ty,stroke:c,'stroke-width':3,'stroke-linecap':'round',opacity:(1-dt/1.25)*.75})}
       mk(hw,'circle',{cx:gx,cy:ty,r:13,fill:c,opacity:pk.bad?.4:1});
       mk(hw,'text',{x:gx,y:ty+5,'text-anchor':'middle',style:'font-size:14px;font-weight:700;font-family:var(--f-display);fill:var(--gem-ink)'},pk.finger)}}}
+/* ===== Next finger: ring the next spot and arrow from the current one ===== */
+let nxtKey='';
+function clearNext(){const g=$('nxt');if(g)g.innerHTML='';nxtKey=''}
+function drawNext(local,cyc){const g=$('nxt');if(!g||!P||!P.plucks.length)return;const pl=P.plucks;
+  let ni=pl.findIndex(pk=>pk.q>local+1e-6);if(ni<0)ni=0;
+  let ci=-1;for(let i=pl.length-1;i>=0;i--)if(pl[i].q<=local+1e-6){ci=i;break}
+  if(ci<0&&cyc>0&&local>=0)ci=pl.length-1;
+  if(local<0)ci=-1;
+  if(ci<0&&local>=P.totalQ)ci=pl.length-1;
+  const nx=pl[ni],cu=ci>=0?pl[ci]:null;
+  const nk=tkey(nx.s,nx.k),ck=cu?tkey(cu.s,cu.k):'';
+  const key=ck+'>'+nk;if(key===nxtKey)return;nxtKey=key;g.innerHTML='';
+  if(ck===nk)return;
+  const c=SCOL(nx.s),bx=SX[nx.s],by=ky(nx.k);
+  mk(g,'circle',{cx:bx,cy:by,r:20,fill:'none',stroke:c,'stroke-width':2.5,'stroke-dasharray':'4 4',class:'nextring'});
+  if(!cu)return;
+  const ax=SX[cu.s],ay=ky(cu.k);const dx=bx-ax,dy=by-ay,L=Math.hypot(dx,dy);if(L<1)return;
+  const ux=dx/L,uy=dy/L;let nx_=-uy,ny_=ux;
+  if(Math.abs(uy)>.8){if(nx_<0){nx_=-nx_;ny_=-ny_}}else if(ny_>0){nx_=-nx_;ny_=-ny_}
+  const bend=Math.max(26,L*.32);const mx=(ax+bx)/2+nx_*bend,my=(ay+by)/2+ny_*bend;
+  const unit=(x,y)=>{const l=Math.hypot(x,y)||1;return [x/l,y/l]};
+  const [sx_,sy_]=unit(mx-ax,my-ay),[ex_,ey_]=unit(mx-bx,my-by);
+  const sx=ax+sx_*20,sy=ay+sy_*20,ex=bx+ex_*24,ey=by+ey_*24;
+  mk(g,'path',{d:`M${sx.toFixed(1)} ${sy.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}`,fill:'none',stroke:c,'stroke-width':3,'stroke-linecap':'round',opacity:.9});
+  const [vx,vy]=unit(ex-mx,ey-my),h=9,w=6;
+  mk(g,'path',{d:`M${(ex+vx*h).toFixed(1)} ${(ey+vy*h).toFixed(1)} L${(ex-vy*w).toFixed(1)} ${(ey+vx*w).toFixed(1)} L${(ex+vy*w).toFixed(1)} ${(ey-vx*w).toFixed(1)} Z`,fill:c,opacity:.9})}
+
 /* ===== Vibrating string and now line ===== */
 const RM=window.matchMedia?window.matchMedia('(prefers-reduced-motion: reduce)'):{matches:false};
 function wavePath(x,y0,y1,amp,ph){const n=24;let d='';for(let i=0;i<=n;i++){const f=i/n,y=y0+(y1-y0)*f;const off=amp*(Math.sin(Math.PI*f)*Math.sin(ph)+.35*Math.sin(2*Math.PI*f)*Math.sin(ph*2.03+1.3));d+=(i?'L':'M')+(x+off).toFixed(2)+' '+y.toFixed(2)}return d}
@@ -631,7 +662,7 @@ function frame(){if(!playing)return;const p=bp(),pos=p-C;let cyc=0,local=pos;
   let ix=-1,kk=null;
   let vn=null;
   if(pos>=0&&local<P.totalQ){for(let j=0;j<P.notes.length;j++){const n=P.notes[j];if(n.q<=local+1e-6&&local<n.q+n.d){ix=j;if(!n.rest){const pk=P.plucks[n.pk];kk=tkey(pk.s,pk.k);vn={s:pk.s,k:pk.k,el:(local-pk.q)*beatDur,len:noteLen(pk.d*beatDur)}}break}}}
-  hotNote(ix);lightTarget(kk);drawVib(vn);
+  hotNote(ix);lightTarget(kk);drawVib(vn);drawNext(pos<0?-1:local,cyc);
   if(pos<0){const cb=4/P.den;setStatus('Count-in '+Math.max(1,Math.floor(p/cb)+1)+' of '+P.num)}
   else setStatus(local>=P.totalQ?'Rest bar. Get ready…':'Pass '+(cyc+1)+'  ·  bar '+(P.barBase+P.ms.filter(q=>q<=local+1e-6).length));
   raf=requestAnimationFrame(frame)}
@@ -663,7 +694,7 @@ async function start(){if(!P)return;ac();playing=true;C=$('countin').checked?P.m
   $('play').textContent='Stop';enterFocus();schedule();sched=setInterval(schedule,25);raf=requestAnimationFrame(frame);
   try{if(navigator.wakeLock)wake=await navigator.wakeLock.request('screen')}catch(e){wake=null}}
 function stop(keepFocus){playing=false;cancelAnimationFrame(raf);clearInterval(sched);nodes.forEach(n=>{try{n.stop()}catch(e){}});nodes=[];
-  const hw=$('hw');if(hw)hw.innerHTML='';drawVib(null);hotNote(-1);lightTarget(null);setStatus('');$('play').textContent='Play';if(P)placeStaff(0,0);
+  const hw=$('hw');if(hw)hw.innerHTML='';drawVib(null);clearNext();hotNote(-1);lightTarget(null);setStatus('');$('play').textContent='Play';if(P)placeStaff(0,0);
   if(keepFocus!==true)exitFocus();try{if(wake){wake.release();wake=null}}catch(e){}}
 function syncNav(){const i=lib.pieces.findIndex(p=>p.id===lib.current);$('prevBtn').style.visibility=i>0?'':'hidden';$('nextBtn').style.visibility=i>=0&&i<lib.pieces.length-1?'':'hidden'}
 function stepPiece(d){const i=lib.pieces.findIndex(p=>p.id===lib.current);const j=i+d;if(i<0||j<0||j>=lib.pieces.length)return;

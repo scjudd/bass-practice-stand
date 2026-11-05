@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="description" content="Upright bass practice: fingerboard note highway and scrolling staff from ABC notation.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -60,6 +60,10 @@ button.quiet{border-color:transparent;background:transparent;font-weight:400;col
 .meta{font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums}
 svg{display:block;width:100%;height:auto}
 #fb{max-width:440px;margin:0 auto}
+html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+*{touch-action:pan-x pan-y}
+input[type=range]{touch-action:pan-y}
+@supports (-webkit-touch-callout:none){input,select,textarea{font-size:16px!important}}
 header,.piecehead,.legend,.loopctl,.opts,.stage>.hint,#incoming,#libS,#editS{transition:opacity .35s ease}
 body.focus :is(header,.piecehead,.legend,.loopctl,.opts,.stage>.hint,#incoming,#libS,#editS){opacity:.08;pointer-events:none}
 body.focus{overflow:hidden;overscroll-behavior:none}
@@ -591,6 +595,11 @@ function frame(){if(!playing)return;const p=bp(),pos=p-C;let cyc=0,local=pos;
   if(pos<0){const cb=4/P.den;setStatus('Count-in '+(Math.floor((p)/cb)+1)+' of '+P.num)}
   else setStatus(local>=P.totalQ?'Rest bar. Get ready…':'Pass '+(cyc+1)+'  ·  bar '+(P.barBase+P.ms.filter(q=>q<=local+1e-6).length));
   raf=requestAnimationFrame(frame)}
+/* ===== No zooming: iOS ignores user-scalable=no, so also cancel pinch gestures ===== */
+['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>{e.preventDefault();try{document.body.style.zoom='1'}catch(_){}} ,{passive:false}));
+document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();else if(typeof e.scale==='number'&&e.scale!==1)e.preventDefault()},{passive:false,capture:true});
+if(window.visualViewport)window.visualViewport.addEventListener('resize',()=>{if(window.visualViewport.scale>1.01){const m=document.querySelector('meta[name=viewport]');const c=m.content;m.content=c+',maximum-scale=1.0';setTimeout(()=>{m.content=c},50)}});
+
 /* ===== Focus mode while playing: dim the rest, fit the player on screen, lock scrolling ===== */
 function viewH(){return (window.visualViewport&&window.visualViewport.height)||window.innerHeight}
 function fitFocus(){if(!document.body.classList.contains('focus'))return;const fb=$('fb');

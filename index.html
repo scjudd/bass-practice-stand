@@ -165,7 +165,7 @@ ul.plain{margin:0;padding-left:20px;font-size:15px}
 
   <section class="stage" aria-label="Player">
     <div class="piecehead"><h1 id="ptitle">Loading…</h1><div class="meta" id="pmeta"></div></div>
-    <svg id="fb" viewBox="0 0 360 372" role="img" aria-label="Upright bass fingerboard. Upcoming notes slide in from the right toward where each finger goes."></svg>
+    <svg id="fb" viewBox="0 0 360 372" role="img" aria-label="Upright bass fingerboard. Upcoming notes slide in from the right to the now line, and the spot to play lights up."></svg>
     <div class="legend" aria-hidden="true"><span><b style="background:var(--sE)"></b>E string</span><span><b style="background:var(--sA)"></b>A string</span><span><b style="background:var(--sD)"></b>D string</span><span><b style="background:var(--sG)"></b>G string</span></div>
     <div id="staffbox"><svg id="staff" viewBox="0 0 320 128" role="img" aria-label="Scrolling bass clef staff with note names"></svg></div>
     <div class="status" id="status" aria-live="polite"></div>
@@ -220,38 +220,39 @@ ul.plain{margin:0;padding-left:20px;font-size:15px}
       <div class="subpanel">
         <div class="hint">Send this text to an AI assistant (Claude, ChatGPT or similar) along with photos of the music. Paste its reply into the Import box above. Check the result against the page before practicing, because AI readers can misread notes.</div>
         <div class="row"><button id="aiCopy">Copy prompt</button><span class="msg" id="aiMsg"></span></div>
-        <textarea id="aiPrompt" readonly spellcheck="false" style="min-height:0;height:180px;font-size:12.5px" aria-label="Prompt to send with photos of sheet music">I'm attaching photos of beginner upright bass (double bass) sheet music written in bass clef. Convert every numbered exercise or song you can see into ABC notation, and give me the result as one JSON object I can import into my practice app.
+        <textarea id="aiPrompt" readonly spellcheck="false" style="min-height:0;height:180px;font-size:12.5px" aria-label="Prompt to send with photos of sheet music">I'm attaching photos of sheet music. Transcribe every piece you can see into ABC notation, and give me the result as one JSON object I can import into a music practice app.
 
-Reply with only the JSON, in a single code block, in exactly this shape:
+Reply with the JSON object only: no code fences, no explanation before or after it. It must have exactly this shape:
 
 {
   "app": "bass-practice-stand",
   "version": 1,
   "pieces": [
     {
-      "title": "12. Open String Walk",
+      "title": "Example Piece",
       "tempo": 72,
-      "abc": "X:12\nT:12. Open String Walk\nC:Pluck each open string.\nM:4/4\nL:1/4\nQ:1/4=72\nK:C clef=bass\n!0!D, D, D, z | !0!G, G, G, z | !0!A,, A,, A,, z | !0!E,,4 |]"
+      "abc": "X:1\nT:Example Piece\nM:4/4\nL:1/4\nQ:1/4=72\nK:C clef=bass\nD, E, ^F, G, | A,2 G,2 | ^F, E, D,2 |]"
     }
   ]
 }
 
 Rules for each piece:
-- One object per exercise, in page order. "title" is the exercise number, a period, and its name as printed (for example "12. Open String Walk"). Use the same text for the T: line.
-- "tempo" is 72 unless the page shows a tempo.
-- The "abc" value is one JSON string. Separate its lines with \n.
-- Header lines, in order: X: (the exercise number), T: (title), C: (the instruction sentence or composer credit printed with it, if any), M: (meter as printed), L:1/4, Q:1/4=72 (or the printed tempo), and K: last.
-- K: line: if the staff has no key signature, write K:C clef=bass and put every sharp or flat on the note itself, exactly as printed. If there is a key signature, write the key, for example K:D clef=bass, and only mark accidentals that are printed next to notes.
-- Pitches in bass clef, using ABC octave marks:
-  bottom line G = G,,  bottom space A = A,,  second line B = B,,  second space C = C,  middle line D = D,  third space E = E,  fourth line F = F,  top space G = G,  top line A = A,
-  below the staff: F = F,,  first ledger line E = E,, (the open E string)
-  above the staff: B = B,  first ledger line C = C (middle C)
-- Sharps, flats and naturals go before the note: ^F, is F sharp, _B,, is B flat, =F, is F natural.
-- Lengths with L:1/4: quarter note D,  half note D,2  dotted half D,3  whole note D,4  eighth note D,/  dotted quarter D,3/2. Rests use z with the same lengths: z is a quarter rest, z2 a half rest, z4 a whole rest.
+- One object per piece, in the order they appear. "title" is the title as printed, including any number in front of it. Use the same text for the T: line.
+- "tempo" is the printed tempo in quarter-note beats per minute, or 72 if none is shown.
+- The "abc" value is a single JSON string with its lines separated by \n.
+- Header lines, in this order: X: (a number, 1 if nothing better), T: (title), C: (composer, or a short instruction printed with the piece, if any), M: (meter as printed), L:1/4, Q:1/4= followed by the tempo, and K: last.
+- K: line: write the key from the key signature and add clef=bass, for example K:C clef=bass or K:D clef=bass. Only mark accidentals that are printed next to notes; the key signature covers the rest.
+- Write pitches as printed, with ABC octave marks. On the bass clef staff, from the bottom line up:
+  G,, (bottom line)  A,,  B,,  C,  D, (middle line)  E,  F,  G,  A, (top line)
+  Below the staff: F,, then E,, on the first ledger line. Above the staff: B, then C (middle C) on the first ledger line.
+  If the music is in treble clef, write the pitches as printed (middle C is C, the treble staff runs E to F, i.e. E F G A B c d e f) and keep clef=bass in the K: line.
+- Sharps, flats and naturals go right before the note: ^F, is F sharp, _B,, is B flat, =F, is F natural.
+- Lengths with L:1/4: quarter note D,  half note D,2  dotted half D,3  whole note D,4  eighth note D,/  dotted quarter D,3/2  triplet (3D,E,F,  tie D,2-D,
+- Rests use z with the same lengths: z is a quarter rest, z2 a half rest, z4 a whole rest.
 - Put a space between notes. Use | for barlines and |] for the final double bar. Use |: and :| for repeat signs, and [1 and [2 for first and second endings.
-- If a finger number is printed above a note, put it before that note in exclamation marks: !4!^F,
-- Ignore "pizz." and "arco", the counting numbers printed under the staff, and any blanks the student is meant to fill in.
-- Keep a song that continues onto a second staff as one piece. Start a new ABC line for each printed staff line.
+- If a finger number is printed above a note, put it right before that note in exclamation marks: !4!^F,
+- Leave out anything that isn't notes, rests, barlines, repeats or finger numbers, such as playing-technique words, counting written under the staff, and blanks meant to be filled in.
+- Keep a piece that continues onto another staff line as one piece. Start a new ABC line for each printed staff line.
 - Before answering, count the beats in every measure and make sure each one matches the meter. If a note is hard to read, make your best guess and add a comment line inside the abc text starting with %, naming the measure you weren't sure about.</textarea>
       </div>
     </details>
@@ -288,7 +289,7 @@ Rules for each piece:
           <code>D,/  D,3/2</code><span>Eighth, dotted quarter</span>
           <code>z  z2</code><span>Quarter rest, half rest</span>
           <code>(3D,E,F,</code><span>Triplet</span>
-          <code>D,2-D,</code><span>Tie (one pluck)</span>
+          <code>D,2-D,</code><span>Tie (one held note)</span>
           <h4>Bars and repeats</h4>
           <code>|  |]</code><span>Barline, final barline</span>
           <code>|: … :|</code><span>Repeat section</span>
@@ -468,7 +469,7 @@ function drawBoard(){
   mk(fb,'text',{x:11,y:BOT+24,'text-anchor':'middle',style:'font-size:10px;fill:var(--ink-3);font-family:var(--f-body)'},'tape');
   [OPENY].concat(TAPES.map(ky)).forEach(y=>mk(fb,'line',{x1:HIT,y1:y,x2:HW_END,y2:y,stroke:'var(--line-2)','stroke-width':1,'stroke-dasharray':'2 5'}));
   mk(fb,'line',{x1:HIT,y1:OPENY-20,x2:HIT,y2:BOT,stroke:'var(--ink-3)','stroke-width':2,opacity:.7});
-  mk(fb,'text',{x:HIT,y:BOT+24,'text-anchor':'middle',style:'font-size:11px;fill:var(--ink-3);font-family:var(--f-body)'},'pluck');
+  mk(fb,'text',{x:HIT,y:BOT+24,'text-anchor':'middle',style:'font-size:11px;fill:var(--ink-3);font-family:var(--f-body)'},'now');
   if(P)PPQH=Math.min(120,Math.max(58,30/P.minD));
   mk(fb,'g',{id:'hw'});
   targets={};
@@ -748,7 +749,12 @@ D, D, E, E, | ^F, ^F, G,2 | ^F, E, D,2 |]`,mode:'open',tempo:null};lib.pieces.pu
 
 /* ===== Import / export ===== */
 function splitAbc(txt){const parts=txt.split(/^(?=X:)/m).map(s=>s.trim()).filter(s=>/^X:/m.test(s)&&/^K:/m.test(s));return parts}
-function importText(txt){txt=(txt||'').trim();if(!txt){setMsg('importMsg','Paste something to import first.','err');return}
+function cleanPasted(txt){txt=(txt||'').replace(/\u00a0/g,' ').trim();
+  const fence=txt.match(/```[a-zA-Z]*\s*\n?([\s\S]*?)```/);if(fence)txt=fence[1].trim();
+  else txt=txt.replace(/^```[a-zA-Z]*\s*/,'').replace(/```\s*$/,'').trim();
+  if(txt[0]!=='{'&&txt[0]!=='['&&!/^X:/m.test(txt)&&txt.indexOf(SHARE_KEY)<0){const a=txt.indexOf('{'),b=txt.lastIndexOf('}');if(a>=0&&b>a)txt=txt.slice(a,b+1)}
+  return txt}
+function importText(txt){txt=cleanPasted(txt);if(!txt){setMsg('importMsg','Paste something to import first.','err');return}
   const li=txt.indexOf(SHARE_KEY);
   if(li>=0&&!/^X:/m.test(txt)){decodeShare(txt.slice(li+SHARE_KEY.length).split(/\s/)[0]).then(items=>{importItems(items,'importMsg');$('importBox').value=''}).catch(e=>setMsg('importMsg',e.message,'err'));return}
   let items=[];

@@ -4,7 +4,7 @@ A practice app for beginning upright (double) bass. Type or paste a piece in
 [ABC notation](https://abcnotation.com/), and it plays the piece on a loop
 while showing:
 
-- a fingerboard "note highway": upcoming notes slide toward a pluck line,
+- a fingerboard "note highway": upcoming notes slide toward a "now" line,
   colored by string (E pink, A amber, D blue, G green), each labeled with the
   finger to use, and the target spot on the fingerboard lights up on the beat
 - a scrolling bass clef staff with note names above each note

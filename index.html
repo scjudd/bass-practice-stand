@@ -62,7 +62,11 @@ button.danger{color:var(--danger)}
 button.quiet{border-color:transparent;background:transparent;font-weight:400;color:var(--ink-2)}
 .stage{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .piecehead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.piecehead h1{font-family:var(--f-display);font-weight:700;font-size:clamp(22px,5vw,30px);line-height:1.1;margin:0;text-wrap:balance}
+.piecehead h1{font-family:var(--f-display);font-weight:700;font-size:clamp(22px,5vw,30px);line-height:1.1;margin:0;text-wrap:balance;min-height:2.2em;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;align-content:end;flex:1 1 100%}
+.piecehead .meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.stage,.stage *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.stage input{-webkit-user-select:auto;user-select:auto}
+body.focus,body.focus *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
 .meta{font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums}
 svg{display:block;width:100%;height:auto}
 #fb{max-width:440px;margin:0 auto}
@@ -704,7 +708,9 @@ function stop(keepFocus){playing=false;cancelAnimationFrame(raf);clearInterval(s
 function syncNav(){const i=lib.pieces.findIndex(p=>p.id===lib.current);$('prevBtn').style.visibility=i>0?'':'hidden';$('nextBtn').style.visibility=i>=0&&i<lib.pieces.length-1?'':'hidden'}
 function stepPiece(d){const i=lib.pieces.findIndex(p=>p.id===lib.current);const j=i+d;if(i<0||j<0||j>=lib.pieces.length)return;
   const was=playing||restartPending;if(restartPending){clearTimeout(rangeT);rangeT=0;restartPending=false}if(playing)stop(true);
-  selectPiece(lib.pieces[j].id);if(was){start()}}
+  const y0=$('play').getBoundingClientRect().top;
+  selectPiece(lib.pieces[j].id);if(was){start()}
+  if(!document.body.classList.contains('focus')){const dy=$('play').getBoundingClientRect().top-y0;if(Math.abs(dy)>.5)window.scrollBy(0,dy)}}
 $('prevBtn').addEventListener('click',()=>stepPiece(-1));
 $('nextBtn').addEventListener('click',()=>stepPiece(1));
 $('play').addEventListener('click',()=>{if(restartPending){clearTimeout(rangeT);rangeT=0;restartPending=false;stop()}else if(playing)stop();else start()});
@@ -731,7 +737,7 @@ function sliceView(F,a,b){
 function applyRange(){const N=FULL.msAll.length;P=sliceView(FULL,range[0],range[1]);
   $('aVal').textContent=range[0];$('bVal').textContent=range[1];
   document.querySelector('.loopctl').classList.toggle('on',!(range[0]===1&&range[1]===N));
-  $('wholeBtn').hidden=range[0]===1&&range[1]===N;
+  $('wholeBtn').style.visibility=range[0]===1&&range[1]===N?'hidden':'';
   drawBoard();drawStaff()}
 function setRange(a,b){if(!FULL)return;const N=FULL.msAll.length;a=Math.max(1,Math.min(N,a));b=Math.max(1,Math.min(N,b));if(a>b){if(a!==range[0])b=a;else a=b}
   if(a===range[0]&&b===range[1])return;

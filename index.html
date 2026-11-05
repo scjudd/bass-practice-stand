@@ -632,14 +632,14 @@ function drawNext(local,cyc){const g=$('nxt');if(!g||!P||!P.plucks.length)return
   if(!cu)return;
   const ax=SX[cu.s],ay=ky(cu.k);const dx=bx-ax,dy=by-ay,L=Math.hypot(dx,dy);if(L<1)return;
   const ux=dx/L,uy=dy/L;let nx_=-uy,ny_=ux;
-  if(Math.abs(uy)>.8){if(nx_<0){nx_=-nx_;ny_=-ny_}}else{const wantDown=(ay+by)/2<100;if((ny_>0)!==wantDown){nx_=-nx_;ny_=-ny_}}
-  const bend=L<120?64:Math.max(46,L*.32);const mx=(ax+bx)/2+nx_*bend,my=(ay+by)/2+ny_*bend;
+  if(Math.abs(uy)>.8){if(nx_<0){nx_=-nx_;ny_=-ny_}}else if(ny_>0){nx_=-nx_;ny_=-ny_}
+  const bend=Math.max(26,L*.32);const mx=(ax+bx)/2+nx_*bend,my=(ay+by)/2+ny_*bend;
   const unit=(x,y)=>{const l=Math.hypot(x,y)||1;return [x/l,y/l]};
   const [sx_,sy_]=unit(mx-ax,my-ay),[ex_,ey_]=unit(mx-bx,my-by);
-  const AH=17,AW=7.5;const sx=ax+sx_*20,sy=ay+sy_*20,ex=bx+ex_*23,ey=by+ey_*23;
+  const sx=ax+sx_*20,sy=ay+sy_*20,ex=bx+ex_*24,ey=by+ey_*24;
   mk(g,'path',{d:`M${sx.toFixed(1)} ${sy.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}`,fill:'none',stroke:c,'stroke-width':3,'stroke-linecap':'round',opacity:.9});
-  const arcL=Math.hypot(mx-sx,my-sy)+Math.hypot(ex-mx,ey-my),sc=Math.min(1,arcL/110);const [vx,vy]=unit(ex-mx,ey-my),h=AH*(.75+.25*sc),w=AW*(.75+.25*sc),bx2=ex-vx*h,by2=ey-vy*h;
-  mk(g,'path',{d:`M${ex.toFixed(1)} ${ey.toFixed(1)} L${(bx2-vy*w).toFixed(1)} ${(by2+vx*w).toFixed(1)} L${(bx2+vy*w).toFixed(1)} ${(by2-vx*w).toFixed(1)} Z`,fill:c,opacity:.9})}
+  const [vx,vy]=unit(ex-mx,ey-my),h=9,w=6;
+  mk(g,'path',{d:`M${(ex+vx*h).toFixed(1)} ${(ey+vy*h).toFixed(1)} L${(ex-vy*w).toFixed(1)} ${(ey+vx*w).toFixed(1)} L${(ex+vy*w).toFixed(1)} ${(ey-vx*w).toFixed(1)} Z`,fill:c,opacity:.9})}
 
 /* ===== Vibrating string and now line ===== */
 const RM=window.matchMedia?window.matchMedia('(prefers-reduced-motion: reduce)'):{matches:false};

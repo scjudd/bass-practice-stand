@@ -607,14 +607,14 @@ function drawVib(v){const g=$('vib');if(!g)return;g.innerHTML='';if(!v)return;
   const t=performance.now()/1000,c=SCOL(v.s),x=SX[v.s];
   const y0=v.k===0?NUT:ky(v.k),y1=BOT;
   const env=.45+.55*Math.exp(-v.el*3.5),flash=Math.exp(-v.el*6);
-  const amp=RM.matches?0:2.6*env,ph=t*2*Math.PI*11;
+  const amp=RM.matches?0:1.8*env,ph=t*2*Math.PI*9;
   const d=wavePath(x,y0,y1,amp,ph);
-  mk(g,'path',{d,fill:'none',stroke:c,'stroke-width':16,opacity:(.55+.45*flash).toFixed(3),filter:'url(#sglow)','stroke-linecap':'round'});
+  mk(g,'path',{d,fill:'none',stroke:c,'stroke-width':12,opacity:(.35+.35*flash).toFixed(3),filter:'url(#sglow)','stroke-linecap':'round'});
   mk(g,'path',{d,fill:'none',stroke:c,'stroke-width':4.6,'stroke-linecap':'round'});
-  mk(g,'path',{d,fill:'none',stroke:'#ffffff','stroke-width':1.4,opacity:(.35+.4*flash).toFixed(3),'stroke-linecap':'round'});
-  const nd=wavePath(HIT,OPENY-20,BOT,RM.matches?0:1.8*env,ph*1.07+.6);
-  mk(g,'path',{d:nd,fill:'none',stroke:c,'stroke-width':12,opacity:(.4+.45*flash).toFixed(3),filter:'url(#sglow)'});
-  mk(g,'path',{d:nd,fill:'none',stroke:c,'stroke-width':2.6,opacity:(.7+.3*flash).toFixed(3)})}
+  mk(g,'path',{d,fill:'none',stroke:'#ffffff','stroke-width':1.2,opacity:(.2+.3*flash).toFixed(3),'stroke-linecap':'round'});
+  const nd=wavePath(HIT,y0,y1,amp,ph);
+  mk(g,'path',{d:nd,fill:'none',stroke:c,'stroke-width':10,opacity:(.3+.3*flash).toFixed(3),filter:'url(#sglow)','stroke-linecap':'round'});
+  mk(g,'path',{d:nd,fill:'none',stroke:c,'stroke-width':2.6,opacity:(.75+.25*flash).toFixed(3),'stroke-linecap':'round'})}
 let pvRaf=0;
 function previewVib(s,k){cancelAnimationFrame(pvRaf);const t0=performance.now();const step=()=>{if(playing)return;const el=(performance.now()-t0)/1000;if(el>.8){drawVib(null);return}drawVib({s,k,el});pvRaf=requestAnimationFrame(step)};step()}
 function frame(){if(!playing)return;const p=bp(),pos=p-C;let cyc=0,local=pos;

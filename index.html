@@ -111,6 +111,14 @@ ul.lib button.quiet:last-child{color:var(--ink-3)}
 [hidden]{display:none!important}
 ul.lib .t small{color:var(--ink-3);margin-left:8px}
 #exportbox{min-height:120px;font-size:12px}
+.sharep{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--bg)}
+.checks{display:flex;flex-direction:column;gap:2px}
+.checks label{display:flex;align-items:center;gap:10px;min-height:36px;font-size:15px}
+.checks input{width:18px;height:18px;accent-color:var(--ink)}
+.qr{display:flex;justify-content:center}
+.qr canvas{width:min(100%,320px);height:auto;border-radius:8px;image-rendering:pixelated}
+.incoming{border-color:var(--sD)}
+ul.plain{margin:0;padding-left:20px;font-size:15px}
 .confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border:1px solid var(--danger);border-radius:var(--r);font-size:14px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -120,6 +128,14 @@ ul.lib .t small{color:var(--ink-3);margin-left:8px}
   <header>
     <div class="brand"><i aria-hidden="true"><b style="background:var(--sE)"></b><b style="background:var(--sA)"></b><b style="background:var(--sD)"></b><b style="background:var(--sG)"></b></i>Bass Practice Stand</div>
   </header>
+
+  <section class="card incoming" id="incoming" hidden aria-labelledby="inH">
+    <h2 id="inH">Import shared pieces?</h2>
+    <div class="hint" id="inText"></div>
+    <ul class="plain" id="inList"></ul>
+    <div class="row"><button id="inYes" class="primary">Import</button><button id="inNo" class="quiet">Not now</button></div>
+    <div class="msg" id="inMsg"></div>
+  </section>
 
   <section class="stage" aria-label="Player">
     <div class="piecehead"><h1 id="ptitle">Loading…</h1><div class="meta" id="pmeta"></div></div>
@@ -153,8 +169,19 @@ ul.lib .t small{color:var(--ink-3);margin-left:8px}
     <div class="row"><button id="newBtn">New piece</button><button id="clearBtn" class="quiet">Clear library</button></div>
     <div id="clearConfirm" class="confirm" hidden><span id="clearText">Remove every piece?</span><button id="clearYes" class="danger">Clear library</button><button id="clearNo" class="quiet">Keep</button></div>
 
+    <h3>Share</h3>
+    <div class="hint">Make a QR code another device can scan with its camera to open the app and import pieces. Nothing is uploaded: the pieces travel inside the link itself.</div>
+    <div class="row"><button id="shareBtn">Share by QR code</button></div>
+    <div id="sharePanel" class="sharep" hidden>
+      <div class="hint">Pieces to include</div>
+      <div id="shareList" class="checks"></div>
+      <div id="qrBox" class="qr" aria-live="polite"></div>
+      <div class="msg" id="shareMsg"></div>
+      <div class="row"><button id="shareCopy">Copy link</button><button id="shareAll" class="quiet">Select all</button><button id="shareClose" class="quiet">Done</button></div>
+    </div>
+
     <h3>Import</h3>
-    <div class="hint">Paste a library export or ABC text, or choose a .json or .abc file. Pieces with the same title are replaced.</div>
+    <div class="hint">Paste a library export, a share link, or ABC text, or choose a .json or .abc file. Pieces with the same title are replaced.</div>
     <textarea id="importBox" style="min-height:110px" spellcheck="false" placeholder='{"app":"bass-practice-stand","pieces":[…]}'></textarea>
     <div class="row">
       <button id="importBtn" class="primary">Import pasted text</button>
@@ -247,6 +274,7 @@ Rules for each piece:
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/abcjs@6.7.2/dist/abcjs-basic-min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script id="core">
 /* ===== Compile ABC -> timeline (pure) ===== */
 const OPEN={E:40,A:45,D:50,G:55};            // written MIDI of open strings (sounds an octave lower)
@@ -653,12 +681,16 @@ D, D, E, E, | ^F, ^F, G,2 | ^F, E, D,2 |]`,mode:'open',tempo:null};lib.pieces.pu
 /* ===== Import / export ===== */
 function splitAbc(txt){const parts=txt.split(/^(?=X:)/m).map(s=>s.trim()).filter(s=>/^X:/m.test(s)&&/^K:/m.test(s));return parts}
 function importText(txt){txt=(txt||'').trim();if(!txt){setMsg('importMsg','Paste something to import first.','err');return}
+  const li=txt.indexOf(SHARE_KEY);
+  if(li>=0&&!/^X:/m.test(txt)){decodeShare(txt.slice(li+SHARE_KEY.length).split(/\s/)[0]).then(items=>{importItems(items,'importMsg');$('importBox').value=''}).catch(e=>setMsg('importMsg',e.message,'err'));return}
   let items=[];
   if(txt[0]==='{'||txt[0]==='['){let v;try{v=JSON.parse(txt)}catch(e){setMsg('importMsg','That looks like JSON but has a typo, so nothing was imported.','err');return}
     const arr=Array.isArray(v)?v:v.pieces;if(!Array.isArray(arr)){setMsg('importMsg','No "pieces" list found in that JSON.','err');return}
     items=arr.map(x=>typeof x==='string'?{abc:x}:x).filter(x=>x&&typeof x.abc==='string')}
   else items=splitAbc(txt).map(abc=>({abc}));
   if(!items.length){setMsg('importMsg','No pieces found. ABC pieces start with an X: line and need a K: line.','err');return}
+  importItems(items,'importMsg');$('importBox').value=''}
+function importItems(items,msgId){
   let added=0,replaced=0,failed=[];let firstId=null;
   for(const it of items){try{compile(it.abc,'open')}catch(e){failed.push(titleOf(it.abc));continue}
     const t=titleOf(it.abc);const ex=lib.pieces.find(p=>titleOf(p.abc)===t);
@@ -666,8 +698,8 @@ function importText(txt){txt=(txt||'').trim();if(!txt){setMsg('importMsg','Paste
     if(ex){Object.assign(ex,rec);replaced++;firstId=firstId||ex.id}else{const np={id:uid(),...rec};lib.pieces.push(np);added++;firstId=firstId||np.id}}
   saveLib();fillLib();
   if(firstId)selectPiece(firstId);
-  setMsg('importMsg',`Imported ${added} new${replaced?`, replaced ${replaced}`:''}.`+(failed.length?` Skipped ${failed.length} that didn't read: ${failed.join(', ')}.`:''),failed.length?'err':'ok');
-  $('importBox').value=''}
+  setMsg(msgId,`Imported ${added} new${replaced?`, replaced ${replaced}`:''}.`+(failed.length?` Skipped ${failed.length} that didn't read: ${failed.join(', ')}.`:''),failed.length?'err':'ok');
+  return added+replaced}
 $('importBtn').addEventListener('click',()=>importText($('importBox').value));
 $('importFile').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{importText(String(r.result));e.target.value=''};r.onerror=()=>setMsg('importMsg','That file could not be read.','err');r.readAsText(f)});
 function exportJSON(){return JSON.stringify({app:'bass-practice-stand',version:1,pieces:lib.pieces.map(p=>({title:titleOf(p.abc),tempo:p.tempo||undefined,abc:p.abc}))},null,2)}
@@ -690,6 +722,58 @@ $('aiPrompt').addEventListener('focus',e=>e.target.select());
 /* ===== Offline support when self-hosted ===== */
 try{if('serviceWorker' in navigator&&location.protocol==='https:'&&!(window.claude&&window.claude.use))navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}
 
+/* ===== Share by link / QR ===== */
+const SHARE_KEY='#lib=';
+function toB64u(bytes){let bin='';for(let i=0;i<bytes.length;i+=8192)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+function fromB64u(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const bin=atob(s);const out=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);return out}
+async function encodeShare(pieces){const raw=new TextEncoder().encode(JSON.stringify({v:1,p:pieces.map(p=>[p.abc,p.tempo||0])}));
+  if(typeof CompressionStream!=='undefined'){try{const z=new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());return '1.'+toB64u(z)}catch(e){}}
+  return '0.'+toB64u(raw)}
+async function decodeShare(s){
+  try{s=decodeURIComponent(s)}catch(e){}
+  const ver=s.slice(0,1),data=s.slice(2);let bytes;
+  try{bytes=fromB64u(data)}catch(e){throw new Error('That share link is damaged or incomplete.')}
+  if(ver==='1'){if(typeof DecompressionStream==='undefined')throw new Error('This browser is too old to open share links. Update iOS or try another browser.');
+    try{bytes=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer())}catch(e){throw new Error('That share link is damaged or incomplete.')}}
+  else if(ver!=='0')throw new Error('That share link was made by a newer version of the app. Reload to update.');
+  let v;try{v=JSON.parse(new TextDecoder().decode(bytes))}catch(e){throw new Error('That share link is damaged or incomplete.')}
+  if(!v||!Array.isArray(v.p))throw new Error('That share link has no pieces in it.');
+  return v.p.filter(x=>Array.isArray(x)&&typeof x[0]==='string').map(([abc,tempo])=>({abc,tempo:typeof tempo==='number'&&tempo>0?tempo:null}))}
+function shareBase(){return location.origin+location.pathname}
+let shareSel=new Set(),shareURL='',shareSeq=0;
+function fillShareList(){const box=$('shareList');box.innerHTML='';lib.pieces.forEach(p=>{const l=document.createElement('label');const c=document.createElement('input');c.type='checkbox';c.checked=shareSel.has(p.id);
+  c.addEventListener('change',()=>{c.checked?shareSel.add(p.id):shareSel.delete(p.id);renderQR()});l.append(c,document.createTextNode(titleOf(p.abc)));box.appendChild(l)})}
+async function renderQR(){const seq=++shareSeq;const chosen=lib.pieces.filter(p=>shareSel.has(p.id));const box=$('qrBox');
+  if(!chosen.length){box.innerHTML='';shareURL='';setMsg('shareMsg','Tick at least one piece to make a code.','');return}
+  const url=shareBase()+SHARE_KEY+await encodeShare(chosen);if(seq!==shareSeq)return;shareURL=url;
+  if(typeof qrcode==='undefined'){box.innerHTML='';setMsg('shareMsg','The QR code maker did not load. Use Copy link instead.','err');return}
+  let qr=null;for(const ec of ['M','L']){try{const q=qrcode(0,ec);q.addData(url);q.make();qr=q;break}catch(e){}}
+  if(!qr){box.innerHTML='';setMsg('shareMsg','Too much music for one QR code. Untick a few pieces and share them in two codes.','err');return}
+  const n=qr.getModuleCount(),qz=4,W=n+qz*2,cell=Math.max(4,Math.floor(720/W));
+  const cv=document.createElement('canvas');cv.width=cv.height=W*cell;const g=cv.getContext('2d');
+  g.fillStyle='#ffffff';g.fillRect(0,0,cv.width,cv.height);g.fillStyle='#000000';
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(qr.isDark(r,c))g.fillRect((c+qz)*cell,(r+qz)*cell,cell,cell);
+  cv.setAttribute('role','img');cv.setAttribute('aria-label','QR code for '+chosen.length+' shared piece'+(chosen.length>1?'s':''));
+  box.innerHTML='';box.appendChild(cv);
+  setMsg('shareMsg','Scan with the other device\u2019s camera. '+chosen.length+' piece'+(chosen.length>1?'s':'')+' included.','ok')}
+$('shareBtn').addEventListener('click',()=>{shareSel=new Set(lib.pieces.map(p=>p.id));fillShareList();$('sharePanel').hidden=false;renderQR()});
+$('shareAll').addEventListener('click',()=>{shareSel=new Set(lib.pieces.map(p=>p.id));fillShareList();renderQR()});
+$('shareClose').addEventListener('click',()=>{$('sharePanel').hidden=true;$('qrBox').innerHTML=''});
+$('shareCopy').addEventListener('click',()=>{if(!shareURL){setMsg('shareMsg','Tick at least one piece first.','err');return}
+  const p=navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(shareURL):Promise.reject();
+  p.then(()=>setMsg('shareMsg','Link copied. Paste it into Import on the other device.','ok')).catch(()=>{const box=$('exportbox');box.value=shareURL;box.hidden=false;box.select();setMsg('shareMsg','Copy the link from the box under Back up.','')})});
+let incomingItems=null;
+function clearHash(){try{history.replaceState(null,'',location.pathname+location.search)}catch(e){location.hash=''}}
+async function checkIncoming(){const h=location.hash;if(!h.startsWith(SHARE_KEY))return;
+  try{incomingItems=await decodeShare(h.slice(SHARE_KEY.length))}catch(e){$('incoming').hidden=false;$('inText').textContent=e.message;$('inList').innerHTML='';$('inYes').hidden=true;return}
+  const ul=$('inList');ul.innerHTML='';incomingItems.forEach(it=>{const li=document.createElement('li');const t=titleOf(it.abc);const ex=lib.pieces.some(p=>titleOf(p.abc)===t);li.textContent=t+(ex?' (replaces yours)':'');ul.appendChild(li)});
+  $('inText').textContent='This link carries '+incomingItems.length+' piece'+(incomingItems.length>1?'s':'')+'. Import adds them to the library on this device.';
+  $('inYes').hidden=false;$('incoming').hidden=false;window.scrollTo({top:0})}
+$('inYes').addEventListener('click',()=>{if(!incomingItems)return;const n=importItems(incomingItems,'inMsg');incomingItems=null;clearHash();
+  $('inYes').hidden=true;$('inList').innerHTML='';$('inText').textContent='';$('inNo').textContent='Close';if(!n)return;setTimeout(()=>{$('incoming').hidden=true;$('inNo').textContent='Not now'},2500)});
+$('inNo').addEventListener('click',()=>{incomingItems=null;clearHash();$('incoming').hidden=true;$('inNo').textContent='Not now';setMsg('inMsg','')});
+window.addEventListener('hashchange',checkIncoming);
+
 /* ===== Boot ===== */
 loadLib();
 try{$('click').checked=localStorage.getItem(LS+'.click')==='1';$('countin').checked=localStorage.getItem(LS+'.countin')!=='0'}catch(e){}
@@ -698,6 +782,7 @@ $('countin').addEventListener('change',()=>{try{localStorage.setItem(LS+'.counti
 function boot(){if(typeof ABCJS==='undefined'){$('ptitle').textContent='Music reader did not load';setMsg('abcMsg','The music reader failed to load. Check your connection and reload.','err');return}
   selectPiece(lib.current||lib.pieces[0].id)}
 boot();
+checkIncoming();
 (async()=>{try{if(window.claude&&window.claude.use)downloads=await window.claude.use('downloads')}catch(e){downloads=null}})();
 document.addEventListener('visibilitychange',async()=>{if(playing&&document.visibilityState==='visible'){try{if(navigator.wakeLock)wake=await navigator.wakeLock.request('screen')}catch(e){}}});
 </script>

@@ -560,11 +560,21 @@ function hotNote(ix){if(ix===hotIx)return;
 let ctx=null,playing=false,raf=0,sched=0,aBeat=0,aTime=0,beatDur=60/72,C=0,nodes=[],nextCyc=0,nextIx=0,nextTick=0,wake=null,lastStatus='';
 function ac(){if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)();if(ctx.state!=='running')ctx.resume();return ctx}
 const freq=m=>440*Math.pow(2,(m-12-69)/12);
+/* One amplitude envelope drives both the sound and the string animation. */
+const ENV={peak:.55,sus:.14,att:.006,dec:.35,rel:.06};
+const noteLen=dur=>Math.max(.12,dur*.96);
+function envShape(len){const relStart=Math.max(ENV.att+.01,len-ENV.rel),decEnd=Math.min(ENV.dec,relStart);
+  const holdV=ENV.peak*Math.pow(ENV.sus/ENV.peak,(decEnd-ENV.att)/(ENV.dec-ENV.att));return {relStart,decEnd,holdV}}
+function envGain(el,len){if(el<0||el>=len)return 0;const e=envShape(len);
+  if(el<ENV.att)return ENV.peak*el/ENV.att;
+  if(el<e.decEnd)return ENV.peak*Math.pow(ENV.sus/ENV.peak,(el-ENV.att)/(ENV.dec-ENV.att));
+  if(el<e.relStart)return e.holdV;
+  return e.holdV*Math.pow(.0005/e.holdV,(el-e.relStart)/(len-e.relStart))}
 function pluck(t,f,dur){const o=ctx.createOscillator(),o2=ctx.createOscillator(),fl=ctx.createBiquadFilter(),g=ctx.createGain(),g2=ctx.createGain();
   o.type='sawtooth';o2.type='triangle';o.frequency.value=f;o2.frequency.value=f;g2.gain.value=.6;
   fl.type='lowpass';fl.Q.value=4;fl.frequency.setValueAtTime(1400,t);fl.frequency.exponentialRampToValueAtTime(260,t+.25);
-  const len=Math.max(.12,dur*.96);
-  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.55,t+.006);g.gain.exponentialRampToValueAtTime(.14,t+.35);g.gain.setValueAtTime(.14,t+Math.max(.36,len-.06));g.gain.exponentialRampToValueAtTime(.0005,t+len);
+  const len=noteLen(dur),e=envShape(len);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(ENV.peak,t+ENV.att);g.gain.exponentialRampToValueAtTime(e.holdV,t+e.decEnd);g.gain.setValueAtTime(e.holdV,t+e.relStart);g.gain.exponentialRampToValueAtTime(.0005,t+len);
   o.connect(fl);o2.connect(g2);g2.connect(fl);fl.connect(g);g.connect(ctx.destination);o.start(t);o2.start(t);o.stop(t+len+.02);o2.stop(t+len+.02);
   nodes.push(o,o2);if(nodes.length>160)nodes=nodes.slice(-60)}
 function tick(t,acc){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=acc?1600:1100;g.gain.setValueAtTime(acc?.28:.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.05);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+.06);nodes.push(o)}
@@ -606,7 +616,7 @@ function wavePath(x,y0,y1,amp,ph){const n=24;let d='';for(let i=0;i<=n;i++){cons
 function drawVib(v){const g=$('vib');if(!g)return;g.innerHTML='';if(!v)return;
   const t=performance.now()/1000,c=SCOL(v.s),x=SX[v.s];
   const y0=v.k===0?NUT:ky(v.k),y1=BOT;
-  const env=.45+.55*Math.exp(-v.el*3.5),flash=Math.exp(-v.el*6);
+  const gn=envGain(v.el,v.len)/ENV.peak;if(gn<.02)return;const env=Math.sqrt(gn),flash=Math.max(0,(gn-ENV.sus/ENV.peak)/(1-ENV.sus/ENV.peak));
   const amp=RM.matches?0:1.8*env,ph=t*2*Math.PI*9;
   const d=wavePath(x,y0,y1,amp,ph);
   mk(g,'path',{d,fill:'none',stroke:c,'stroke-width':12,opacity:(.35+.35*flash).toFixed(3),filter:'url(#sglow)','stroke-linecap':'round'});
@@ -614,13 +624,13 @@ function drawVib(v){const g=$('vib');if(!g)return;g.innerHTML='';if(!v)return;
   mk(g,'path',{d,fill:'none',stroke:'#ffffff','stroke-width':1.2,opacity:(.2+.3*flash).toFixed(3),'stroke-linecap':'round'});
 }
 let pvRaf=0;
-function previewVib(s,k){cancelAnimationFrame(pvRaf);const t0=performance.now();const step=()=>{if(playing)return;const el=(performance.now()-t0)/1000;if(el>.8){drawVib(null);return}drawVib({s,k,el});pvRaf=requestAnimationFrame(step)};step()}
+function previewVib(s,k){cancelAnimationFrame(pvRaf);const t0=performance.now();const step=()=>{if(playing)return;const el=(performance.now()-t0)/1000;if(el>noteLen(.8)){drawVib(null);return}drawVib({s,k,el,len:noteLen(.8)});pvRaf=requestAnimationFrame(step)};step()}
 function frame(){if(!playing)return;const p=bp(),pos=p-C;let cyc=0,local=pos;
   if(pos>=0){cyc=Math.floor(pos/P.L);local=pos-cyc*P.L}
   placeStaff(local,cyc);drawHighway(p);
   let ix=-1,kk=null;
   let vn=null;
-  if(pos>=0&&local<P.totalQ){for(let j=0;j<P.notes.length;j++){const n=P.notes[j];if(n.q<=local+1e-6&&local<n.q+n.d){ix=j;if(!n.rest){const pk=P.plucks[n.pk];kk=tkey(pk.s,pk.k);vn={s:pk.s,k:pk.k,el:(local-pk.q)*beatDur}}break}}}
+  if(pos>=0&&local<P.totalQ){for(let j=0;j<P.notes.length;j++){const n=P.notes[j];if(n.q<=local+1e-6&&local<n.q+n.d){ix=j;if(!n.rest){const pk=P.plucks[n.pk];kk=tkey(pk.s,pk.k);vn={s:pk.s,k:pk.k,el:(local-pk.q)*beatDur,len:noteLen(pk.d*beatDur)}}break}}}
   hotNote(ix);lightTarget(kk);drawVib(vn);
   if(pos<0){const cb=4/P.den;setStatus('Count-in '+Math.max(1,Math.floor(p/cb)+1)+' of '+P.num)}
   else setStatus(local>=P.totalQ?'Rest bar. Get ready…':'Pass '+(cyc+1)+'  ·  bar '+(P.barBase+P.ms.filter(q=>q<=local+1e-6).length));

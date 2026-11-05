@@ -761,7 +761,7 @@ function shareBase(){return location.origin+location.pathname}
 let shareSel=new Set(),shareURL='',shareSeq=0;
 function fillShareList(){const box=$('shareList');box.innerHTML='';lib.pieces.forEach(p=>{const l=document.createElement('label');const c=document.createElement('input');c.type='checkbox';c.checked=shareSel.has(p.id);
   c.addEventListener('change',()=>{c.checked?shareSel.add(p.id):shareSel.delete(p.id);renderQR()});l.append(c,document.createTextNode(titleOf(p.abc)));box.appendChild(l)})}
-async function renderQR(){const seq=++shareSeq;const chosen=lib.pieces.filter(p=>shareSel.has(p.id));const box=$('qrBox');
+async function renderQR(){syncShareAll();const seq=++shareSeq;const chosen=lib.pieces.filter(p=>shareSel.has(p.id));const box=$('qrBox');
   if(!chosen.length){box.innerHTML='';shareURL='';setMsg('shareMsg','Tick at least one piece to make a code.','');return}
   const url=shareBase()+SHARE_KEY+await encodeShare(chosen);if(seq!==shareSeq)return;shareURL=url;
   if(typeof qrcode==='undefined'){box.innerHTML='';setMsg('shareMsg','The QR code maker did not load. Use Copy link instead.','err');return}
@@ -775,7 +775,9 @@ async function renderQR(){const seq=++shareSeq;const chosen=lib.pieces.filter(p=
   box.innerHTML='';box.appendChild(cv);
   setMsg('shareMsg','Scan with the other device\u2019s camera. '+chosen.length+' piece'+(chosen.length>1?'s':'')+' included.','ok')}
 $('shareBtn').addEventListener('click',()=>{shareSel=new Set(lib.pieces.map(p=>p.id));fillShareList();$('sharePanel').hidden=false;renderQR()});
-$('shareAll').addEventListener('click',()=>{shareSel=new Set(lib.pieces.map(p=>p.id));fillShareList();renderQR()});
+function allSelected(){return lib.pieces.every(p=>shareSel.has(p.id))}
+function syncShareAll(){$('shareAll').textContent=allSelected()?'Deselect all':'Select all'}
+$('shareAll').addEventListener('click',()=>{shareSel=allSelected()?new Set():new Set(lib.pieces.map(p=>p.id));fillShareList();renderQR()});
 $('shareClose').addEventListener('click',()=>{$('sharePanel').hidden=true;$('qrBox').innerHTML=''});
 $('shareCopy').addEventListener('click',()=>{if(!shareURL){setMsg('shareMsg','Tick at least one piece first.','err');return}
   const p=navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(shareURL):Promise.reject();

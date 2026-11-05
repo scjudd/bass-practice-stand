@@ -616,9 +616,12 @@ function drawHighway(p){const hw=$('hw');if(!hw)return;hw.innerHTML='';
       mk(hw,'text',{x:gx,y:ty+5,'text-anchor':'middle',style:'font-size:14px;font-weight:700;font-family:var(--f-display);fill:var(--gem-ink)'},pk.finger)}}}
 /* ===== Next finger: ring the next spot and arrow from the current one ===== */
 let nxtKey='';
-function clearNext(){const g=$('nxt');if(g)g.innerHTML='';nxtKey=''}
+const NEXT_LEAD=1.0,NEXT_FADE=.25;
+function clearNext(){const g=$('nxt');if(g){g.innerHTML='';g.removeAttribute('opacity');g.style.display=''}nxtKey=''}
 function drawNext(local,cyc){const g=$('nxt');if(!g||!P||!P.plucks.length)return;const pl=P.plucks;
-  let ni=pl.findIndex(pk=>pk.q>local+1e-6);if(ni<0)ni=0;
+  let ni=pl.findIndex(pk=>pk.q>local+1e-6);const wrap=ni<0;if(wrap)ni=0;
+  const dtNext=((wrap?pl[0].q+P.L:pl[ni].q)-local)*beatDur;
+  const vis=Math.max(0,Math.min(1,(NEXT_LEAD-dtNext)/NEXT_FADE));g.setAttribute('opacity',vis.toFixed(2));g.style.display=vis>0?'':'none';
   let ci=-1;for(let i=pl.length-1;i>=0;i--)if(pl[i].q<=local+1e-6){ci=i;break}
   if(ci<0&&cyc>0&&local>=0)ci=pl.length-1;
   if(local<0)ci=-1;

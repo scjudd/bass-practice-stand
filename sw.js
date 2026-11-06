@@ -1,6 +1,6 @@
 // Offline support: the page itself is fetched network-first so updates land
 // right away; CDN scripts and fonts are cached after first use.
-const CACHE = 'bass-stand-v2';
+const CACHE = 'bass-stand-v4';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

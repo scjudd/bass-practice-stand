@@ -358,7 +358,7 @@ function labelOf(p,midi){const li=mod(p,7),base=12*(Math.floor(p/7)+5)+STEP[li];
 
 function compile(abc,mode,inst){
   if(typeof ABCJS==='undefined')throw new Error('The music reader failed to load. Check your connection and reload.');
-  const tunes=ABCJS.parseOnly(abc);
+  const tunes=ABCJS.parseOnly(String(abc).replace(/^%%instrument\b.*$/gmi,'%'));
   const tune=tunes&&tunes[0];
   if(!tune||!tune.lines)throw new Error('No tune found. A piece starts with X:1 and needs a K: line.');
   const els=[];let key=null;
